@@ -1,0 +1,267 @@
+local TexturePack = {["Enabled"] = false}
+local stored = {}
+local StabPos
+shared.did = shared.did or {}
+shared.did2 = shared.did2 or {}
+TexturePack = GuiLibrary["ObjectsThatCanBeSaved"]["WorldWindow"]["Api"].CreateOptionsButton({
+	["Name"] = "TexturePack v2",
+	["Function"] = function(Enabled)
+		if Enabled then
+			if shared.dnutassets then
+				shared.dnutassets = nil
+			end
+			if shared.dnutassets_char then
+				for i,v in pairs(shared.dnutassets_char) do 
+					for _,v_ in pairs(v) do v_:Disconnect() end 
+				end
+				shared.dnutassets_char = nil
+			end
+			task.spawn(function()
+				local world = workspace.Map.Worlds:GetChildren()[1]
+				local blocks = world.Blocks:GetChildren()
+				for i,v in pairs(blocks) do
+					if v.Name == "grass" then
+						pcall(function ()
+							v:GetChildren()[1].Texture = "rbxassetid://7062163349"
+							table.insert(stored,v:GetChildren()[1])
+						end)
+					end
+				end
+			end)
+			local doing = false;
+			local function sword(name,texture)
+				local a = game:GetObjects(texture)[1]
+				a.Handle.Size = Vector3.new(0.03, 1.886, 1.385)
+				a.Name = name
+				if not shared.did2[game.ReplicatedStorage.Items[name]] then
+					local clonepart = game.ReplicatedStorage.Items[name]:Clone()
+					clonepart.Parent = game.ReplicatedStorage
+					shared.did2[game.ReplicatedStorage.Items[name]] = clonepart
+				end
+				local attach = game.ReplicatedStorage.Items[name]["Handle"]["RightGripAttachment"]:Clone()
+				game:GetService("ReplicatedStorage").Items[name].Handle:Destroy()
+				local as = a:GetChildren()
+				for i,v in pairs(as) do
+					v.Parent = game:GetService("ReplicatedStorage").Items[name]
+				end
+				a = game:GetService("ReplicatedStorage").Items[name]
+				for i,v in pairs(a:GetChildren()) do
+					if v.Name ~= "Handle" and v:IsA("BasePart") then
+						v.CanCollide = false;
+						v.Anchored = false;
+						local weld = Instance.new("WeldConstraint",a)
+						weld.Part0 = a.Handle;weld.Part1 = v
+					end
+				end
+				a.Handle.Rotation = a.Handle.Rotation + Vector3.new(0,90,0)
+				if not shared.did[a] then
+					attach.Position = attach.Position + Vector3.new(0,0,0)
+					shared.did[a] = true
+				end
+				attach.Rotation = Vector3.new(0,-90,0)--1,2
+				attach.Parent = a.Handle
+				--past this is for the char
+				task.wait()
+				local char = lplr.Character
+				shared.dnutassets_char = shared.dnutassets_char or {}
+				local func;
+				local function charwait(char)
+					repeat task.wait() until char.Character and char.Character:FindFirstChild("HumanoidRootPart")
+					return char.Character
+				end
+				local num = #shared.dnutassets_char + 1;
+				local function swordfunc(sword)
+					task.wait(.5)
+					if doing then
+						task.wait(.5)
+						if sword.Parent then
+							doing = false;
+						end
+					end
+					if sword.Name == name and not sword:IsA("Tool") and not doing then
+						doing = true
+						task.spawn(function()
+							task.wait(.5) --to avoid lag.
+							doing = false;
+						end)
+						a = game:GetService("ReplicatedStorage").Items[name]:Clone()
+						local attach = game.ReplicatedStorage.Items[name]["Handle"]["RightGripAttachment"]:Clone()
+						attach.Rotation = Vector3.new(0,math.rad(-180),0)--1,2
+						local oldpos = sword:WaitForChild("Handle").CFrame
+						attach.Parent = a.Handle
+						local old = sword.Handle
+						old.Name = "eee"
+						for i,v in pairs(a:GetChildren()) do
+							if v:IsA("BasePart") then
+								v.CanCollide = false
+								v.Anchored = false;
+								v.Parent = sword
+							end
+						end
+						if not pcall(function()
+								for i,v in pairs(sword:GetChildren()) do
+									if v.Name ~= "Handle" and v:IsA("BasePart") then
+										local weld = Instance.new("WeldConstraint",sword)
+										weld.Part0 = a.Handle;weld.Part1 = v
+										v.CanCollide = false;
+										v.Anchored = false;
+									end
+								end
+							end) then end
+						for i,v in pairs(sword:GetChildren()) do if v:IsA("BasePart") then
+								v.CanCollide = false;
+								v.Anchored = false;
+							end
+						end
+						task.wait()
+						-- oldpos = lplr.Character.HumanoidRootPart.Position + Vector3.new(2.6,0.66,0.405)
+						-- oldpos = CFrame.new(oldpos)
+						if (StabPos or {}).Enabled then
+							sword.Handle.CFrame = oldpos * CFrame.Angles(0,0,math.rad(90))
+						else
+							sword.Handle.Rotation = sword.Handle.Rotation + Vector3.new(0,90,0)
+							sword.Handle.CFrame = oldpos * CFrame.Angles(0,math.rad(180),0)
+						end
+						print(sword.Handle.Rotation)
+						--sword.Handle.Rotation += Vector3.new(0,0,180)
+						local weld = Instance.new("WeldConstraint",sword)
+						weld.Part0 = (lplr.Character or charwait(lplr)):FindFirstChild("RightHand")
+						weld.Part1 = sword.Handle
+						old.Parent = nil
+						for i,v in pairs(sword:GetChildren()) do
+							if v:IsA("BasePart") and v.Name ~= "Handle" then
+								local weld = v:FindFirstChild("WeldConstraint") or
+									Instance.new("WeldConstraint",sword)
+								weld.Part0 = sword.Handle
+								weld.Part1 = v;
+							elseif v:IsA("WeldConstraint") then
+								v.Part0 = (lplr.Character or charwait(lplr)):FindFirstChild("RightHand")
+								v.Part1 = sword.Handle
+							end
+						end
+						while sword.Parent and sword.Parent.Parent do
+							task.wait()
+							if GuiLibrary.ObjectsThatCanBeSaved.InfiniteFlyOptionsButton.Api.Enabled then 
+								repeat task.wait() until not GuiLibrary.ObjectsThatCanBeSaved.InfiniteFlyOptionsButton.Api.Enabled
+								task.wait(2)
+								for i,v in pairs(sword:GetChildren()) do
+									if v:IsA("BasePart") and v.Name ~= "Handle" then
+										local weld = v:FindFirstChild("WeldConstraint") or
+											Instance.new("WeldConstraint",sword)
+										weld.Part0 = v.Handle
+										weld.Part1 = v;
+									elseif v:IsA("WeldConstraint") then
+										v.Part0 = (lplr.Character or charwait(lplr)):FindFirstChild("RightHand")
+										v.Part1 = sword.Handle
+									end
+								end
+							end
+						end
+					end
+				end
+				task.spawn(function()
+					shared.dnutassets_char[#shared.dnutassets_char + 1] = {(lplr.Character or charwait(lplr)).DescendantAdded:Connect(function(sword)
+						swordfunc(sword)
+					end)}
+				end)
+				task.spawn(function()
+					if lplr.Character and lplr.Character:FindFirstChild("HumanoidRootPart") then
+						if lplr.Character:FindFirstChild(name) then
+							swordfunc(lplr.Character:FindFirstChild(name))
+						end
+					end
+				end)
+				--return attach.Parent.Parent
+			end
+			task.spawn(function()
+				sword("wood_sword","rbxassetid://13188316527")
+				sword("stone_sword","rbxassetid://13188310386")
+				sword("iron_sword","rbxassetid://13188288926")
+				sword("diamond_sword","rbxassetid://13295372099")
+				sword("emerald_sword","rbxassetid://13180720345")
+				local d;
+				d = lplr.CharacterAdded:Connect(function(c)
+					task.spawn(function()
+						TexturePack.ToggleButton(false)
+					end)
+					task.wait(0.1)
+					task.spawn(function()
+						TexturePack.ToggleButton(true)
+					end)
+					d:Disconnect()
+				end)
+				return d
+			end)
+		else
+			if shared.dnutassets then
+				shared.dnutassets = nil
+			end
+			if shared.dnutassets_char then
+				for i,v in pairs(shared.dnutassets_char) do 
+					for _,v_ in pairs(v) do v_:Disconnect() end 
+				end
+				shared.dnutassets_char = nil
+			end
+			if shared.did2 then
+				for i,v in pairs(shared.did2) do
+					local item = game.ReplicatedStorage.Items[v.Name]
+					v.Name = item.Name
+					item:Destroy()
+					v:Clone().Parent = game.ReplicatedStorage.Items
+					v:Destroy()
+				end
+				shared.did2 = {}
+				shared.did = {}
+			end
+		end
+	end
+})
+local function getItem(itemName, inv)
+	for slot, item in pairs(inv or bedwarsStore.localInventory.inventory.items) do
+		if item.itemType == itemName then
+			return item, slot
+		end
+	end
+	return nil
+end
+local function updateStore(newStore, oldStore)
+	if newStore.Game ~= oldStore.Game then 
+		bedwarsStore.matchState = newStore.Game.matchState
+		if bedwarsStore.matchState == 0 and newStore.Game.matchState ~= 0 then
+			bedwarsStore.secs = 1
+		else
+			task.spawn(function()
+				task.wait(1)
+				bedwarsStore.secs = nil
+			end)
+		end
+		local customqueue = newStore.Game.queueType or "bedwars_test"
+		customqueue = (string.find(customqueue,"skywars") and "Skywars" or string.find(customqueue,"30v30") and "30V30" or
+			string.find(customqueue,"2v2") and "2v2" or "")
+		bedwarsStore.queueType = newStore.Game.queueType or "bedwars_test"
+		bedwarsStore.customDnutqueue = customqueue
+	end
+	if newStore.Bedwars ~= oldStore.Bedwars then 
+		bedwarsStore.equippedKit = newStore.Bedwars.kit ~= "none" and newStore.Bedwars.kit or ""
+	end
+	if newStore.Inventory ~= oldStore.Inventory then
+		local newInventory = (newStore.Inventory and newStore.Inventory.observedInventory or {inventory = {}})
+		local oldInventory = (oldStore.Inventory and oldStore.Inventory.observedInventory or {inventory = {}})
+		bedwarsStore.localInventory = newStore.Inventory.observedInventory
+		if newInventory ~= oldInventory then
+			--vapeEvents.InventoryChanged:Fire()
+		end
+		if newInventory.inventory.items ~= oldInventory.inventory.items then
+			--vapeEvents.InventoryAmountChanged:Fire()
+		end
+		if newInventory.inventory.hand ~= oldInventory.inventory.hand then 
+			local currentHand = newStore.Inventory.observedInventory.inventory.hand
+			local handType = ""
+			if currentHand then
+				local handData = bedwars.ItemTable[currentHand.itemType]
+				handType = handData.sword and "sword" or handData.block and "block" or currentHand.itemType:find("bow") and "bow"
+			end
+			bedwarsStore.localHand = {tool = currentHand and currentHand.tool, Type = handType, amount = currentHand and currentHand.amount or 0}
+		end
+	end
+end
